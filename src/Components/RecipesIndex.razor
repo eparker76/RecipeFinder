@@ -1,0 +1,204 @@
+﻿@using ContosoCrafts.WebSite.Models
+@using ContosoCrafts.WebSite.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject JsonFileProductService ProductService
+@inject NavigationManager NavManager
+
+
+<div class="table-responsive table-overflow-visible">
+    <div class="table-title">
+        <div class="row align-items-center">
+            <div class="col-sm-8">
+                <div class="d-flex justify-content-start align-items-center">
+                    <h2 class="mt-1 mb-1"><b>Recipes Index</b></h2>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="d-flex justify-content-end align-items-center">
+                    <a href="/Product/Create" class="btn table-create-btn btn-lg">
+                        Create Recipe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-filter">
+        <div class="row pt-2">
+            <div class="col-sm-3">
+                <div class="d-flex justify-content-start align-items-center">
+                    <span class="p-2">Show</span>
+                    <select id="page-size-selector" class="form-control page-size-select" @onchange="SelectPageSize">
+                        <option>5</option>
+                        <option>10</option>
+                        <option>15</option>
+                        <option>20</option>
+                    </select>
+                    <span class="p-2">entries</span>
+                </div>
+            </div>
+            <div class="col-sm-9">
+                <div class="d-flex justify-content-end align-items-center pr-2">
+                    <span class="p-2">Sort</span>
+                    <select id="sort-dir-selector" class="form-control sort-dir-select" @onchange="SelectSortDir">
+                        <option value="False">Desc</option>
+                        <option value="True">Asc</option>
+                    </select>
+                    <span class="p-2">by</span>
+                    <select id="sort-by-selector" class="form-control sort-by-select" @onchange="SelectSortColumn">
+                        <option value="Title">Recipe Name</option>
+                        <option value="TimeStamp">Modified On</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th class="table-name-col">Recipe Name</th>
+                <th class="table-time-stamp-col">Modified On</th>
+                <th class="table-actions-col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in products)
+            {
+                <tr>
+                    <td>@product.Title</td>
+                    <td>@product.TimeStamp</td>
+                    <td>
+                        <a href="/Product/Read/@product.Id">Read</a>
+                        |
+                        <a href="/Product/Update/@product.Id">Update</a>
+                        |
+                        <a href="/Product/Delete/@product.Id">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="d-flex justify-content-between">
+        <div class="pl-2">Page <b id="page-num-label">@ProductService.page</b> of <b>@maxPages</b></div>
+        <div class="pr-2">
+            <button @onclick="(e => PrevPage())" id="prev-button" type="button" class="btn btn-primary">Previous</button>
+            <button @onclick="(e => NextPage())" id="next-button" type="button" class="btn btn-secondary">Next</button>
+        </div>
+    </div>
+</div>
+
+@code{
+    // The maximum number of pages in the paginated record set.
+    private int maxPages { get; set; }
+
+    // The paginated set of products
+    private IEnumerable<ProductModel> products { get; set; }
+
+    /// <summary>
+    /// Triggered on initialization of this component.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        ProductService.pageSize = 5;
+        maxPages = ProductService.GetMaxPages();
+        products = ProductService.Paginate();
+
+        var recordCount = ProductService.GetAllData().Count();
+    }
+
+    /// <summary>
+    /// Retrieves and sets the paginated record set.
+    /// </summary>
+    private void GetPaginatedRecords()
+    {
+        products = ProductService.Paginate();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Request the previous set of paginated records.
+    /// </summary>
+    private void PrevPage()
+    {
+        if (ProductService.page != 1)
+        {
+            ProductService.page--;
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Request the next set of paginated records.
+    /// </summary>
+    private void NextPage()
+    {
+        if (ProductService.page < maxPages)
+        {
+            ProductService.page++;
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Requests a change in the column to sort by.
+    /// </summary>
+    /// <param name="e">Event emitted by the select sort column controller</param>
+    private void SelectSortColumn(ChangeEventArgs e)
+    {
+        // Only pull records if a valid value is recieved
+        if (e.Value is not null)
+        {
+            // Extract the value of the option
+            string currVal = (string)e.Value;
+
+            // Dynamically set ProductService attributes to configure pagination
+            ProductService.sortColumn = currVal;
+
+            // Pull records for new value
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Requests a change in the direction to sort the designated column by.
+    /// </summary>
+    /// <param name="e">Event emitted by the select sort direction controller</param>
+    private void SelectSortDir(ChangeEventArgs e)
+    {
+        // Only pull records if a valid value is recieved
+        if (e.Value is not null)
+        {
+            // Extract the value of the option
+            bool currVal = bool.Parse((string)e.Value);
+
+            // Dynamically set ProductService attributes to configure pagination
+            ProductService.sortAsc = currVal;
+
+            // Pull records for new value
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Requests a change in the size of the page.
+    /// </summary>
+    /// <param name="e">Event emitted by the select page controller</param>
+    private void SelectPageSize(ChangeEventArgs e)
+    {
+        // Only pull records if a valid value is recieved
+        if (e.Value is not null)
+        {
+            // Extract the value of the option
+            int currVal = Int32.Parse((string)e.Value);
+
+            // Dynamically set ProductService attributes to configure pagination
+            ProductService.pageSize = currVal;
+            ProductService.page = 1;
+
+            // Pull records for new value
+            maxPages = ProductService.GetMaxPages();
+            GetPaginatedRecords();
+        }
+    }
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">

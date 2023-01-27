@@ -1,0 +1,18 @@
+﻿@page "/"
+@model ContosoCrafts.WebSite.Pages.HomeModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<body class="background">
+    <div class="title">
+        Recipes Without Fuss
+    </div>
+
+    <div class="enter">
+        <form asp-page="Index">
+            <input type="submit" class="button" value="Enter!" />
+        </form>
+    </div>
+</body>
+

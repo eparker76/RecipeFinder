@@ -1,0 +1,221 @@
+@using ContosoCrafts.WebSite.Models
+@using ContosoCrafts.WebSite.Services
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@inject JsonFileProductService ProductService
+@inject NavigationManager NavManager
+
+<body class="bg-browse">
+    <div class="browse">
+        <form method="get">
+            <div class="input-group">
+                <input class="form-control" id="search-input" @bind-value="ProductService.SearchText"
+                       @bind-value:event="oninput" @onkeydown="Enter" placeholder="Search Recipes" />
+            </div>
+
+            <div class="collapsible">
+                @{
+                    MudTheme custom = new()
+                    {
+                        Palette = new Palette
+                        {
+                            Primary = "#C2E8FF",
+                            PrimaryContrastText = "#000",
+                            Secondary = "#B6CDE2",
+                            SecondaryContrastText = "#000"
+                        }
+                    };
+                }
+                <MudThemeProvider  Theme="custom"/>
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Advanced Search" MaxHeight="500">
+                        <b>Ingredients:</b>
+                        <MudChipSet @bind-SelectedChips="selectedIngredients" MultiSelection="true" Filter="true">
+                            @foreach (IngredientTypeEnum ingredientType in Enum.GetValues(typeof(IngredientTypeEnum)))
+                            {
+                                // Represents the integer value of the ingredient enum choice
+                                int ingredientValue = (int)ingredientType;
+
+                                // Generates the identifier for the ingredient MudChip
+                                string ingredientId = "ingredient-option-" + ingredientValue;
+
+                                // Displays ingredient option if not unknown
+                                @if (ingredientValue != 0)
+                                {
+                                    <MudChip 
+                                     Value="@ingredientValue"
+                                     Variant="Variant.Filled"
+                                     Color="Color.Primary"
+                                     SelectedColor="Color.Secondary"
+                                     id="@{@ingredientId}">
+                                        @ingredientType.DisplayName()
+                                    </MudChip>
+                                }
+                            }
+                        </MudChipSet>
+                        <b>Categories:</b>
+                        <MudChipSet @bind-SelectedChips="selectedRecipeTypes" MultiSelection="true" Filter="true">
+                            @foreach (ProductTypeEnum recipeType in Enum.GetValues(typeof(ProductTypeEnum)))
+                            {
+                                // Represents the integer value of the producttype enum choice
+                                int recipeValue = (int)recipeType;
+
+                                // Generates the identifier for the recipetype MudChip
+                                string recipeId = "recipe-type-option-" + recipeValue;
+
+                                // Displays recipetype option if not unknown
+                                @if (recipeValue != 0)
+                                {
+                                    <MudChip 
+                                     Value="@recipeValue"
+                                     Color="Color.Primary"
+                                     SelectedColor="Color.Secondary"
+                                     id="@{@recipeId}">
+                                        @recipeType.DisplayName()
+                                    </MudChip>
+                                }
+                            }
+                        </MudChipSet>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </div>
+
+            <br />
+
+            <div class="d-flex flex-column align-center">
+                @{
+                    // Updates ingredient selection list dynamically
+                    if (selectedIngredients != null)
+                    {
+                        ProductService.IngredientNumbers = selectedIngredients.Select(chip => (int)chip.Value);
+                        GetPaginatedRecords();
+                    }
+
+                    // Updates recipe types selection list dynamically
+                    if (selectedRecipeTypes != null)
+                    {
+                        ProductService.ProductTypeNumbers = selectedRecipeTypes.Select(chip => (int)chip.Value);
+                        GetPaginatedRecords();
+                    }
+
+                    <div class="card-columns">
+                    @foreach (var product in products)
+                    {
+                        <div class="card">
+                            <div class="card-img" style="background-image: url('@product.Image');"></div>
+                            <div class="card-body">
+                                <h5 class="card-title">@product.Title</h5>
+                            </div>
+                            @if(selectedIngredients != null){
+                                int myVariety = 0;
+                                foreach(var x in product.Ingredients){
+                                    if (x.Value > 0){
+                                            myVariety++;
+                                        }
+                                }                                
+                                <p>Your search makes up: @selectedIngredients.Count() / @myVariety ingredients in this recipe</p>
+                            }
+                            <div class="card-footer">
+                                <small class="text-muted">
+                                    <a href="/Recipe/@product.Id" class="btn btn-primary">More Info</a>
+                                </small>
+                            </div>
+                        </div>
+                    }
+                    </div>
+            }
+            </div>
+        </form>
+
+        <br/>
+
+        <div class="d-flex justify-content-between">
+                <div>
+                    Page <b id="page-num-label">@ProductService.page</b> of <b>@maxPages</b>
+                    <br />
+                    Search Results: @ProductService.SearchData().Count()
+                </div>
+                <div>
+                    <button @onclick="(e => PrevPage())" id="prev-button" type="button" class="btn btn-primary">Previous</button>
+                    <button @onclick="(e => NextPage())" id="next-button" type="button" class="btn btn-secondary">Next</button>
+                </div>
+            </div>
+    </div>
+</body>
+
+@code {
+    // Represents recipe ingredient selections
+    MudChip[] selectedIngredients;
+    // Represents recipe type selections
+    MudChip[] selectedRecipeTypes;
+
+    // The maximum number of pages in the paginated record set.
+    private int maxPages { get; set; }
+
+    // The paginated set of products
+    private IEnumerable<ProductModel> products { get; set; }
+
+    /// <summary>
+    /// Triggered on initialization of this component.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        ProductService.pageSize = 6;
+        maxPages = ProductService.GetMaxPages();
+        products = ProductService.Paginate();
+
+        var recordCount = ProductService.GetAllData().Count();
+    }
+
+    /// <summary>
+    /// Retrieves and sets the paginated record set.
+    /// </summary>
+    private void GetPaginatedRecords()
+    {
+        maxPages = ProductService.GetMaxPages();
+
+        // Reset page when out of bounds
+        if (maxPages < ProductService.page)
+        {
+            ProductService.page = 1;
+        }
+
+        products = ProductService.Paginate();
+    }
+
+    /// <summary>
+    /// Request the previous set of paginated records.
+    /// </summary>
+    private void PrevPage()
+    {
+        if (ProductService.page != 1)
+        {
+            ProductService.page--;
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Request the next set of paginated records.
+    /// </summary>
+    private void NextPage()
+    {
+        if (ProductService.page < maxPages)
+        {
+            ProductService.page++;
+            GetPaginatedRecords();
+        }
+    }
+
+    /// <summary>
+    /// Triggered upon keydown of search bar and is used to apply search filtering.
+    /// </summary>
+    /// <param name="e">Keydown event</param>
+    public void Enter(KeyboardEventArgs e)
+    {
+        ProductService.page = 1;
+        GetPaginatedRecords();
+    }
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">

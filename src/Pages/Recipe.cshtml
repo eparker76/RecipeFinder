@@ -1,0 +1,119 @@
+﻿@page "{id}"
+@using ContosoCrafts.WebSite.Services
+@using ContosoCrafts.WebSite.Models
+@inject JsonFileProductService ProductService
+@model ContosoCrafts.WebSite.Pages.Product.RecipeModel
+@{
+    ViewData["Title"] = "Read Page " + @Model.Product.Title;
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+
+<div class="crudi-read-bg">
+    <h1 class="recipe-title">@Model.Product.Title</h1>
+    <br />
+    <div class="content product-info-card">
+            <img id="one" class="img-fluid rounded float-left" src='@Model.Product.Image'>
+
+        <div class="product-info">
+            <div class="box-shadow">
+                <p class="card-text">Title: @Model.Product.Title</p>
+                <br/>
+                @foreach (var recipeVal in @Model.Product.ProductType)
+                {
+                    ProductTypeEnum recipeType = (ProductTypeEnum)recipeVal;
+
+                    <p class="badge bg-success">@recipeType.DisplayName()</p>
+                }
+                <br />
+                <p class="card-text">Description: @Model.Product.Description</p>
+                <br />
+                <p class="card-text">Maker: @Model.Product.Maker</p>
+                <br />
+
+                <p class="card-text">Ingredients: </p>
+
+                @foreach (KeyValuePair<int, int> ingredient in @Model.Product.Ingredients)
+                {
+                    IngredientTypeEnum ingredientType = (IngredientTypeEnum)ingredient.Key;
+                    int ingredientAmnt = ingredient.Value;
+
+                    // Only display the chip if an amount > 0 is specified
+                    if (ingredient.Value > 0)
+                    {
+                        <ul class="badge bg-success">@ingredientAmnt x @ingredientType.DisplayName()</ul>
+                    }
+                }
+                <br />
+                <br />
+                @if (@Model.Product.Instructions != null)
+                {
+                    <p class="instructions-display">@Model.Product.Instructions</p>
+                }
+                <br />
+            </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="stars">
+                        @for (int i = 1; i < 6; i++)
+                        {
+                            var currentStar = i;
+                            if (i <= Model.currentRating)
+                            {
+                                <form method="post">
+                                    <input value=@currentStar asp-for="rating" hidden />
+                                    <button type="submit" class="fa fa-star checked"></button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post">
+                                    <input value=@currentStar asp-for="rating" hidden />
+                                    <button type="submit" class="fa fa-star "></button>
+                                </form>
+                            }
+                        }
+                    </div>
+                    <div class="star-label">
+                        @if (Model.voteCount == 0)
+                        {
+                            <span class="badge bg-warning text-dark">
+                                Be the first to vote!
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge text-dark">
+                                @Model.voteCount @Model.voteLabel
+                            </span>
+
+                        }
+                        &nbsp;
+                        @if (Model.voteCount > 0)
+                        {
+                            <span class="badge bg-warning text-dark">
+                                <span>@Model.Product.Ratings.Average().ToString("0.00") out of 5</span>
+                                <span class="visually-hidden">average rating</span>
+                            </span>
+                        }
+                    </div>
+                </div>
+        
+
+
+            </div>
+  
+        </div>
+
+    </div>                    
+    <div class="modal-footer">
+        @if (Model.Product.TimeStamp != null)
+        {
+            <p class="card-text">Last Update: @Model.Product.TimeStamp</p>
+        }
+    </div>
+</div>

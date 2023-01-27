@@ -1,0 +1,16 @@
+﻿@page "{errorMsg?}"
+@model ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="d-flex h-100 flex-column align-items-center">
+    <h1>Error Encountered</h1>
+
+    @if (Model.ErrorMessage != null)
+    {
+        <h2>@Model.ErrorMessage</h2>
+    }
+
+    <a class="btn btn-secondary" onclick="history.back()">Go back</a>
+</div>
